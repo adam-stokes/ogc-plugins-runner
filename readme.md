@@ -7,16 +7,19 @@ runner plugin for ogc
 In a ogc spec, place the following:
 
 ```toml
-[Runner]
-# Run serial or concurrent. For serial steps, they are run in the order defined
-# here.
-serial = true
+[[Runner]]
+name = "Showing env.properties"
+run = """
+#!/bin/bash
+set -eux
+
+cat fixtures/env.properties
+"""
+
+[[Runner]]
+name = "A script cleanup"
+run_script = "fixtures/env-cleanup"
+executable = "python3"
 ```
 
-# description
-
-This is a top level plugin that doesn't do much on its own. It sets a few config
-options that are inherited by all runner types. To use this you'll need a type
-of runner as well, for example, `ogc-plugins-runner-shell`
-
-# see `ogc spec-doc runner` for more information.
+# see `ogc spec-doc Runner` for more information.
