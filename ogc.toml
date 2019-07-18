@@ -1,0 +1,26 @@
+[Info]
+name = "ogc spec runner"
+description = "This tests the runner plugin"
+
+[[Runner]]
+name = "validate"
+description = "Self test the Runner plugin"
+run = """
+#!/bin/bash
+
+pytest
+"""
+deps = ['pip:pytest', 'pip:pytest-mock']
+
+[[Runner.assets]]
+name = 'pytest config .ini'
+source_blob = """
+[pytest]
+addopts = --tb native -rf
+filterwarnings =
+    ignore::DeprecationWarning
+log_cli = 1
+log_cli_level = CRITICAL
+log_cli_format = %(message)s
+"""
+destination = "pytest.ini"
