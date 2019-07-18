@@ -1,4 +1,5 @@
 import setuptools
+from pathlib import Path
 
 README = Path(__file__).parent.absolute() / 'readme.md'
 README = README.read_text(encoding='utf8')
