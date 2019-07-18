@@ -16,7 +16,7 @@ class Runner(SpecPlugin):
     access to the executable
     """
 
-    NAME = "Runner Plugin"
+    friendly_name = "Runner Plugin"
 
     options = [
         ("concurrent", False),
@@ -33,7 +33,7 @@ class Runner(SpecPlugin):
         mode |= (mode & 0o444) >> 2
         os.chmod(str(path), mode)
 
-    def run(self, script_data, timeout=None, concurrent=False):
+    def _run(self, script_data, timeout=None, concurrent=False):
         tmp_script = tempfile.mkstemp()
         tmp_script_path = Path(tmp_script[-1])
         tmp_script_path.write_text(script_data, encoding="utf8")
@@ -49,11 +49,11 @@ class Runner(SpecPlugin):
             cmd.wait()
         else:
             for line in sh.env(
-                str(tmp_script_path), _env=app.env.copy(), _timeout=timeout, _iter=True
+                    str(tmp_script_path), _env=app.env.copy(), _timeout=timeout, _iter=True, _bg_exc=False
             ):
                 app.log.debug(f"run :: {line.strip()}")
 
-    def run_script(self, executable, path, timeout=None, concurrent=False):
+    def _run_script(self, executable, path, timeout=None, concurrent=False):
         script_path = Path(path)
         if not script_path.exists():
             raise SpecProcessException(f"Unable to find file {script_path}")
@@ -75,6 +75,7 @@ class Runner(SpecPlugin):
                 _env=app.env.copy(),
                 _timeout=timeout,
                 _iter=True,
+                    _bg_exc=False
             ):
                 app.log.debug(f"{executable} :: {line.strip()}")
 
@@ -105,10 +106,11 @@ class Runner(SpecPlugin):
         app.log.info(f"Running > {name}")
         try:
             if run:
-                return self.run(run, timeout, concurrent=concurrent)
+                self._run(run, timeout, concurrent=concurrent)
             elif run_script:
-                return self.run_script(
+                self._run_script(
                     executable, run_script, timeout, concurrent=concurrent
                 )
-        except sh.ErrorReturnCode_126 as error:
-            raise SpecProcessException(f"Failed to run: {error.stderr.decode()}")
+        except sh.ErrorReturnCode as error:
+            raise SpecProcessException(f"Running > {name} - FAILED\n{error.stderr.decode().strip()}")
+        app.log.info(f"Running > {name} - SUCCESS")

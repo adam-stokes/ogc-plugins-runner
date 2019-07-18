@@ -20,6 +20,7 @@ cat fixtures/env.properties
 name = "A script cleanup"
 run_script = "fixtures/env-cleanup"
 executable = "python3"
+deps = ['apt:python3-pytest', 'pip:flake8>=1.0.0']
 ```
 
 # see `ogc spec-doc Runner` for more information.
