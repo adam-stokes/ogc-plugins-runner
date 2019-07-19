@@ -4,6 +4,7 @@
 import tempfile
 import sh
 import os
+import datetime
 from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
@@ -21,12 +22,16 @@ class Runner(SpecPlugin):
     options = [
         ("concurrent", False),
         ("name", True),
+        ("tags", False),
         ("description", True),
         ("run", False),
         ("run_script", False),
         ("executable", False),
         ("until", False),
         ("timeout", False),
+        ("wait_for_success", False),
+        ("back_off", False),
+        ("retries", False),
         ("assets", False),
         ("assets.name", False),
         ("assets.source_file", False),
@@ -122,6 +127,14 @@ class Runner(SpecPlugin):
         run = self.get_option("run")
         run_script = self.get_option("run_script")
         executable = self.get_option("executable")
+        retries = self.get_option("retries")
+        timeout = self.get_option("timeout")
+
+        if retries and timeout:
+            raise SpecConfigException(
+                "Can only have retries OR a timeout defined, not both."
+            )
+
         if run and run_script:
             raise SpecConfigException(
                 "Can only have one instance of `run` or `run_script`"
@@ -140,29 +153,73 @@ class Runner(SpecPlugin):
         concurrent = self.get_option("concurrent")
         description = self.get_option("description")
         assets = self.get_option("assets")
+        wait_for_success = self.get_option("wait_for_success")
+        back_off = self.get_option("back_off")
+        retries = self.get_option("retries")
+
+        if timeout:
+            start_time = datetime.datetime.now()
+            timeout_delta = start_time + datetime.timedelta(seconds=timeout)
 
         if not concurrent:
             concurrent = False
 
-        app.log.info(f"Running > {name}\n -- {description}")
-        try:
-            if assets:
-                app.log.info(f"Generating Assets")
-                for asset in assets:
-                    is_executable = asset.get("is_executable", False)
-                    if "source_blob" in asset:
-                        self._handle_source_blob(
-                            asset["source_blob"], asset["destination"], is_executable
-                        )
-                    elif "source_file" in asset:
-                        self._handle_source_file(
-                            asset["source_file"], asset["destination"], is_executable
-                        )
+        if not retries:
+            retries = 0
+        retries_count = 0
+
+        app.log.info(f"Running > {name}\n -- {description.strip()}")
+        if assets:
+            app.log.info(f"Generating Assets")
+            for asset in assets:
+                is_executable = asset.get("is_executable", False)
+                if "source_blob" in asset:
+                    self._handle_source_blob(
+                        asset["source_blob"], asset["destination"], is_executable
+                    )
+                elif "source_file" in asset:
+                    self._handle_source_file(
+                        asset["source_file"], asset["destination"], is_executable
+                    )
+
+        def _do_run():
             if run:
                 self._run(run, timeout, concurrent=concurrent)
             elif run_script:
                 self._run_script(executable, run_script, timeout, concurrent=concurrent)
+
+        try:
+            _do_run()
+        except sh.TimeoutException as error:
+            raise SpecProcessException(f"Running > {name} - FAILED\nTimeout Exceeded")
         except sh.ErrorReturnCode as error:
+            if wait_for_success:
+                app.log.debug(f"Running > {name}: wait for success initiated.")
+                while wait_for_success and retries <= retries_count:
+                    app.log.debug(f"Running > {name}: retrying command.")
+                    if timeout_delta:
+                        current_time = datetime.datetime.now()
+                        time_left = timeout_delta - current_time
+                        app.log.debug(
+                            f"Running > {name}: will timeout in {time_left.seconds} seconds."
+                        )
+                        if timeout_delta < current_time:
+                            raise SpecProcessException(
+                                f"Running > {name} - FAILED\nTimeout Exceeded"
+                            )
+                    if back_off:
+                        app.log.info(
+                            f"Running > {name}: sleeping for {back_off} seconds, retrying."
+                        )
+                        sh.sleep(back_off)
+                    try:
+                        _do_run()
+                    except sh.ErrorReturnCode as error:
+                        app.log.debug(
+                            f"Running > {name}: failure detected, initiating retry."
+                        )
+                    retries_count += 1
+
             raise SpecProcessException(
                 f"Running > {name} - FAILED\n{error.stderr.decode().strip()}"
             )
