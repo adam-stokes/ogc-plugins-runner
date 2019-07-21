@@ -124,11 +124,11 @@ class Runner(SpecPlugin):
         tmp_path.rename(destination)
 
     def conflicts(self):
-        run = self.get_option("run")
-        run_script = self.get_option("run_script")
-        executable = self.get_option("executable")
-        retries = self.get_option("retries")
-        timeout = self.get_option("timeout")
+        run = self.get_plugin_option("run")
+        run_script = self.get_plugin_option("run_script")
+        executable = self.get_plugin_option("executable")
+        retries = self.get_plugin_option("retries")
+        timeout = self.get_plugin_option("timeout")
 
         if retries and timeout:
             raise SpecConfigException(
@@ -144,18 +144,18 @@ class Runner(SpecPlugin):
             raise SpecConfigException("An executable is required with `run_script`")
 
     def process(self):
-        run = self.get_option("run")
-        run_script = self.get_option("run_script")
-        timeout = self.get_option("timeout")
-        until = self.get_option("until")
-        executable = self.get_option("executable")
-        name = self.get_option("name")
-        concurrent = self.get_option("concurrent")
-        description = self.get_option("description")
-        assets = self.get_option("assets")
-        wait_for_success = self.get_option("wait_for_success")
-        back_off = self.get_option("back_off")
-        retries = self.get_option("retries")
+        run = self.get_plugin_option("run")
+        run_script = self.get_plugin_option("run_script")
+        timeout = self.get_plugin_option("timeout")
+        until = self.get_plugin_option("until")
+        executable = self.get_plugin_option("executable")
+        name = self.get_plugin_option("name")
+        concurrent = self.get_plugin_option("concurrent")
+        description = self.get_plugin_option("description")
+        assets = self.get_plugin_option("assets")
+        wait_for_success = self.get_plugin_option("wait_for_success")
+        back_off = self.get_plugin_option("back_off")
+        retries = self.get_plugin_option("retries")
 
         if timeout:
             start_time = datetime.datetime.now()

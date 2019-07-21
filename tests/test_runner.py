@@ -13,12 +13,14 @@ deps = ['pip:pytest', 'pip:flaky>=3.0.0']
 
 [[Runner.assets]]
 name = 'pytest config'
+description = 'pytest asset test'
 source_file = 'data/pytest.ini'
 destination = 'jobs/pytest.ini'
 is_executable = false
 
 [[Runner]]
 name = 'second runner'
+description = 'a second runner test'
 run = '''
 #!/bin/bash
 set -eux
@@ -28,6 +30,7 @@ deps = ['snap:juju']
 
 [[Runner.assets]]
 name = 'ini file'
+description = 'a ini file test'
 source_blob = '''
 [pytest]
 pytest_configs = '-ra -n 5'
@@ -50,8 +53,8 @@ def test_nested_runner_assets(runners):
     """
     for task in runners:
         spec = Runner(task, spec_toml)
-        name = spec.get_option("name")
-        assets = spec.get_option("assets")
+        name = spec.get_plugin_option("name")
+        assets = spec.get_plugin_option("assets")
 
         if name == "a runner":
             if assets:
@@ -68,8 +71,8 @@ def test_runner_assets_blob(runners, mocker):
     mocker.patch("ogc.state.app.log")
     for task in runners:
         spec = Runner(task, spec_toml)
-        name = spec.get_option("name")
-        assets = spec.get_option("assets")
+        name = spec.get_plugin_option("name")
+        assets = spec.get_plugin_option("assets")
 
         if name == "second runner":
             fd, tempfile = spec._tempfile
