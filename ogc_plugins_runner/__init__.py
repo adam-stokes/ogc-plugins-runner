@@ -16,9 +16,10 @@ from ogc.state import app
 
 class Runner(SpecPlugin):
     friendly_name = "OGC Runner Plugin"
-    description = ("Allow running of shell scripts, and other scripts "
-                   "where the runner has access to the executable")
-
+    description = (
+        "Allow running of shell scripts, and other scripts "
+        "where the runner has access to the executable"
+    )
 
     options = [
         {"key": "name", "required": True, "description": "Name of runner"},
@@ -272,10 +273,10 @@ class Runner(SpecPlugin):
             )
         app.log.info(f"Running > {name} - SUCCESS")
 
-
     @classmethod
     def doc_example(cls):
-        return textwrap.dedent("""
+        return textwrap.dedent(
+            """
         ## Example
 
         This shows 4 runners that execute sequentially.
@@ -343,6 +344,8 @@ class Runner(SpecPlugin):
         timeout = 180
         tags = ["teardown"]
         ```
-        """)
+        """
+        )
+
 
 __class_plugin_obj__ = Runner

@@ -56,7 +56,7 @@ SUPPORTED_OPTIONS = [
     "assets.source_blob",
     "assets.source_file",
     "assets.destination",
-    "assets.is_executable"
+    "assets.is_executable",
 ]
 
 
@@ -107,8 +107,7 @@ def test_runner_supported_options(runners):
     test
     """
     spec = Runner(runners[0], spec_toml)
-    spec_options = [item['key'] for item in spec.options]
+    spec_options = [item["key"] for item in spec.options]
     spec_options.sort()
     SUPPORTED_OPTIONS.sort()
     assert spec_options == SUPPORTED_OPTIONS
-
