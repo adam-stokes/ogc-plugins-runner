@@ -279,9 +279,21 @@ class Runner(SpecPlugin):
             """
         ## Example
 
-        This shows 4 runners that execute sequentially.
+        This shows 5 runners that execute sequentially and one example demonstrating how assets work.
 
         ```toml
+        [[Runner]]
+        name = 'Run pytest'
+        description = 'a description'
+        run_script = 'scripts/test-flaky'
+        deps = ['pip:pytest', 'pip:flaky>=3.0.0']
+
+        [[Runner.assets]]
+        name = 'pytest config'
+        source_file = 'data/pytest.ini'
+        destination = 'jobs/pytest.ini'
+        is_executable = false
+
         [[Runner]]
         name = "Running CNCF Conformance"
         description = \"\"\"
