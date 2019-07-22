@@ -1,43 +1,90 @@
-""" OGC Runner Plugin
+"""
+---
+targets: ['docs/plugins/runner.md']
+---
 """
 
 import tempfile
 import sh
 import os
 import datetime
+import textwrap
 from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
 
 class Runner(SpecPlugin):
-    """ OGC Runner Plugin
+    friendly_name = "OGC Runner Plugin"
+    description = ("Allow running of shell scripts, and other scripts "
+                   "where the runner has access to the executable")
 
-    Allow running of shell scripts, and other scripts where the runner has
-    access to the executable
-    """
-
-    friendly_name = "Runner Plugin"
 
     options = [
-        ("concurrent", False),
-        ("name", True),
-        ("tags", False),
-        ("description", True),
-        ("run", False),
-        ("run_script", False),
-        ("executable", False),
-        ("until", False),
-        ("timeout", False),
-        ("wait_for_success", False),
-        ("back_off", False),
-        ("retries", False),
-        ("assets", False),
-        ("assets.name", False),
-        ("assets.source_file", False),
-        ("assets.source_blob", False),
-        ("assets.destination", False),
-        ("assets.is_executable", False),
+        {"key": "name", "required": True, "description": "Name of runner"},
+        {
+            "key": "description",
+            "required": True,
+            "description": "Description of what this runner does",
+        },
+        {
+            "key": "concurrent",
+            "required": False,
+            "description": "Allow this runner to run concurrenty in the background",
+        },
+        {
+            "key": "run",
+            "required": False,
+            "description": "A blob of text to execute, usually starts with a shebang interpreter",
+        },
+        {
+            "key": "run_script",
+            "required": False,
+            "description": "Path to a excutable script",
+        },
+        {
+            "key": "executable",
+            "required": False,
+            "description": "Must be set when using `run_script`, this is the binary to run the script with, (ie. python3)",
+        },
+        {
+            "key": "timeout",
+            "required": False,
+            "description": "Do not exceed this timeout in seconds",
+        },
+        {
+            "key": "wait_for_success",
+            "required": False,
+            "description": "Wait for this runner to be successfull, will retry. Useful if you are doing a status check on a service that will eventually become ready.",
+        },
+        {
+            "key": "back_off",
+            "required": False,
+            "description": "Time in seconds to wait between retries",
+        },
+        {"key": "retries", "required": False, "description": "Max number of retries"},
+        {"key": "assets", "required": False, "description": "Assets configuration"},
+        {"key": "assets.name", "required": False, "description": "Name of asset"},
+        {
+            "key": "assets.source_file",
+            "required": False,
+            "description": "A file to act on, (ie. a configuration file)",
+        },
+        {
+            "key": "assets.source_blob",
+            "required": False,
+            "description": "A text blob of a file to use",
+        },
+        {
+            "key": "assets.destination",
+            "required": False,
+            "description": "Where to output this asset, (ie. saving a pytest.ini blob to a tests directory)",
+        },
+        {
+            "key": "assets.is_executable",
+            "required": False,
+            "description": "Make this asset executable",
+        },
     ]
 
     def _make_executable(self, path):
@@ -224,3 +271,78 @@ class Runner(SpecPlugin):
                 f"Running > {name} - FAILED\n{error.stderr.decode().strip()}"
             )
         app.log.info(f"Running > {name} - SUCCESS")
+
+
+    @classmethod
+    def doc_example(cls):
+        return textwrap.dedent("""
+        ## Example
+
+        This shows 4 runners that execute sequentially.
+
+        ```toml
+        [[Runner]]
+        name = "Running CNCF Conformance"
+        description = \"\"\"
+        See https://www.cncf.io/certification/software-conformance/ for more information.
+        \"\"\"
+        run = \"\"\"
+        #!/bin/bash
+        set -eux
+
+        mkdir -p $HOME/.kube
+        juju scp -m $JUJU_CONTROLLER:$JUJU_MODEL kubernetes-master/0:config $HOME/.kube/
+        export RBAC_ENABLED=$(kubectl api-versions | grep \"rbac.authorization.k8s.io/v1beta1\" -c)
+        kubectl version
+        sonobuoy version
+        sonobuoy run
+        \"\"\"
+
+        tags = ["cncf", "cncf-run"]
+
+        [[Runner]]
+        name = "Waiting for Sonobuoy to complete"
+        description = \"\"\"
+        See https://www.cncf.io/certification/software-conformance/ for more information.
+        \"\"\"
+        run = \"\"\"
+        #!/bin/bash
+        set -eux
+
+        sonobuoy status|grep -q 'Sonobuoy has completed'
+        \"\"\"
+        wait_for_success = true
+        timeout = 10800
+        back_off = 15
+        tags = ["cncf", "cncf-wait-status"]
+
+        [[Runner]]
+        name = "Downloading conformance results"
+        description = "Download results"
+        run = \"\"\"
+        #!/bin/bash
+        set -eux
+
+        sonobuoy retrieve results/.
+        kubectl version
+        \"\"\"
+        wait_for_success = true
+        back_off = 5
+        retries = 5
+        tags = ["cncf", "cncf-download-results"]
+
+        [[Runner]]
+        name = "Tearing down deployment"
+        description = "Tear down juju"
+        run = \"\"\"
+        #!/bin/bash
+        set -eux
+
+        juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER"
+        \"\"\"
+        timeout = 180
+        tags = ["teardown"]
+        ```
+        """)
+
+__class_plugin_obj__ = Runner

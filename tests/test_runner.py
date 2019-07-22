@@ -40,6 +40,25 @@ is_executable = true
 """
 )
 
+SUPPORTED_OPTIONS = [
+    "name",
+    "description",
+    "concurrent",
+    "run",
+    "run_script",
+    "executable",
+    "timeout",
+    "wait_for_success",
+    "back_off",
+    "retries",
+    "assets",
+    "assets.name",
+    "assets.source_blob",
+    "assets.source_file",
+    "assets.destination",
+    "assets.is_executable"
+]
+
 
 @pytest.fixture(scope="module")
 def runners():
@@ -81,3 +100,15 @@ def test_runner_assets_blob(runners, mocker):
                     asset["destination"] = tempfile
             spec.process()
             assert Path(tempfile).exists()
+
+
+def test_runner_supported_options(runners):
+    """ Keep a check on supported options, fail if the spec doesnt match this
+    test
+    """
+    spec = Runner(runners[0], spec_toml)
+    spec_options = [item['key'] for item in spec.options]
+    spec_options.sort()
+    SUPPORTED_OPTIONS.sort()
+    assert spec_options == SUPPORTED_OPTIONS
+
