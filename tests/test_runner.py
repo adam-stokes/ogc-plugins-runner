@@ -41,22 +41,22 @@ is_executable = true
 )
 
 SUPPORTED_OPTIONS = [
-    "name",
-    "description",
-    "concurrent",
-    "run",
-    "run_script",
-    "executable",
-    "timeout",
-    "wait_for_success",
-    "back_off",
-    "retries",
+    "args",
     "assets",
+    "assets.destination",
+    "assets.is_executable",
     "assets.name",
     "assets.source_blob",
     "assets.source_file",
-    "assets.destination",
-    "assets.is_executable",
+    "back_off",
+    "concurrent",
+    "entry_point",
+    "executable",
+    "retries",
+    "run",
+    "run_script",
+    "timeout",
+    "wait_for_success",
 ]
 
 
@@ -110,4 +110,4 @@ def test_runner_supported_options(runners):
     spec_options = [item["key"] for item in spec.options]
     spec_options.sort()
     SUPPORTED_OPTIONS.sort()
-    assert spec_options == SUPPORTED_OPTIONS
+    assert set(spec_options) == set(SUPPORTED_OPTIONS)

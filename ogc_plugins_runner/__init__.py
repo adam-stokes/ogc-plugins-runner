@@ -22,16 +22,20 @@ class Runner(SpecPlugin):
     )
 
     options = [
-        {"key": "name", "required": True, "description": "Name of runner"},
-        {
-            "key": "description",
-            "required": True,
-            "description": "Description of what this runner does",
-        },
         {
             "key": "concurrent",
             "required": False,
             "description": "Allow this runner to run concurrenty in the background",
+        },
+        {
+            "key": "args",
+            "required": False,
+            "description": "A list of arguments to pass to an `entry_point`",
+        },
+        {
+            "key": "entry_point",
+            "required": False,
+            "description": "A list of arguments to act as the entry point",
         },
         {
             "key": "run",
@@ -147,6 +151,15 @@ class Runner(SpecPlugin):
             ):
                 app.log.debug(f"{executable} :: {line.strip()}")
 
+    def _run_entry_point(self, entry_point, args, timeout=None, concurrent=False):
+        updated_args = []
+        for arg in args:
+            if arg.startswith('$'):
+                arg = app.env.get(arg[1:])
+            updated_args.append(arg)
+        for line in sh.env(*entry_point, *updated_args, _env=app.env.copy(), _timeout=timeout, _iter=True, _bg_exc=False):
+            app.log.debug(f"{entry_point} :: {line.strip()}")
+
     def _handle_source_blob(self, blob, destination, is_executable=False):
         """ Process a text blob and stores it to a file
         """
@@ -174,9 +187,22 @@ class Runner(SpecPlugin):
     def conflicts(self):
         run = self.get_plugin_option("run")
         run_script = self.get_plugin_option("run_script")
+        entry_point = self.get_plugin_option("entry_point")
+        args = self.get_plugin_option("args")
         executable = self.get_plugin_option("executable")
         retries = self.get_plugin_option("retries")
         timeout = self.get_plugin_option("timeout")
+        env_requires = self.get_plugin_option("env_requires")
+
+        if entry_point and (run or run_script):
+            raise SpecConfigException(
+                "Can only have entry_point OR run || run_script not both."
+            )
+
+        if args and not entry_point:
+            raise SpecConfigException(
+                "Can't have args without an entry_point."
+            )
 
         if retries and timeout:
             raise SpecConfigException(
@@ -191,9 +217,15 @@ class Runner(SpecPlugin):
         if run_script and not executable:
             raise SpecConfigException("An executable is required with `run_script`")
 
+        if env_requires and any(envvar not in app.env for envvar in env_requires):
+            raise SpecConfigException("One or more of the required environment variables do not exist, please double check your spec.")
+
+
     def process(self):
         run = self.get_plugin_option("run")
         run_script = self.get_plugin_option("run_script")
+        entry_point = self.get_plugin_option("entry_point")
+        args = self.get_plugin_option("args")
         timeout = self.get_plugin_option("timeout")
         until = self.get_plugin_option("until")
         executable = self.get_plugin_option("executable")
@@ -235,6 +267,8 @@ class Runner(SpecPlugin):
                 self._run(run, timeout, concurrent=concurrent)
             elif run_script:
                 self._run_script(executable, run_script, timeout, concurrent=concurrent)
+            elif entry_point:
+                self._run_entry_point(entry_point, args, timeout, concurrent=concurrent)
 
         try:
             _do_run()
@@ -279,9 +313,23 @@ class Runner(SpecPlugin):
             """
         ## Example
 
-        This shows 5 runners that execute sequentially and one example demonstrating how assets work.
+        Variations of using entry points, script blob, and script files, with and without assets.
 
         ```toml
+        [[Runner]]
+        name = "Sync K8s snaps"
+        description = \"\"\"
+        Pull down upstream release tags and make sure our launchpad git repo has those
+        tags synced. Next, we push any new releases (major, minor, or patch) to the
+        launchpad builders for building the snaps from source and uploading to the snap
+        store.
+        \"\"\"
+        deps = ["pip:requirements.txt"]
+        env_requires = ["SNAP_LIST"]
+        entry_point = ["python3", "snap.py"]
+        args = ["sync-upstream", "--snap-list", "$SNAP_LIST"]
+        tags = ["sync"]
+
         [[Runner]]
         name = 'Run pytest'
         description = 'a description'
