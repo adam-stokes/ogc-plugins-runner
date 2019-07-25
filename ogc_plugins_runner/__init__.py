@@ -9,6 +9,8 @@ import sh
 import os
 import datetime
 import textwrap
+import re
+from pprint import pformat
 from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
@@ -28,14 +30,14 @@ class Runner(SpecPlugin):
             "description": "Allow this runner to run concurrenty in the background",
         },
         {
-            "key": "args",
-            "required": False,
-            "description": "A list of arguments to pass to an `entry_point`",
-        },
-        {
             "key": "entry_point",
             "required": False,
             "description": "A list of arguments to act as the entry point",
+        },
+        {
+            "key": "args",
+            "required": False,
+            "description": "A list of arguments to pass to an `entry_point`",
         },
         {
             "key": "run",
@@ -50,7 +52,10 @@ class Runner(SpecPlugin):
         {
             "key": "executable",
             "required": False,
-            "description": "Must be set when using `run_script`, this is the binary to run the script with, (ie. python3)",
+            "description": (
+                "Must be set when using `run_script`, this "
+                "is the binary to run the script with, (ie. python3)"
+            ),
         },
         {
             "key": "timeout",
@@ -60,7 +65,20 @@ class Runner(SpecPlugin):
         {
             "key": "wait_for_success",
             "required": False,
-            "description": "Wait for this runner to be successfull, will retry. Useful if you are doing a status check on a service that will eventually become ready.",
+            "description": (
+                "Wait for this runner to be successfull, will retry. "
+                "Useful if you are doing a status check on a service "
+                "that will eventually become ready."
+            ),
+        },
+        {
+            "key": "fail_silently",
+            "required": False,
+            "description": (
+                "Do not halt on a failed runner, this will print an error"
+                "that can be logged for ci runs, but still allow all "
+                "runners in a spec to complete."
+            ),
         },
         {
             "key": "back_off",
@@ -152,13 +170,21 @@ class Runner(SpecPlugin):
                 app.log.debug(f"{executable} :: {line.strip()}")
 
     def _run_entry_point(self, entry_point, args, timeout=None, concurrent=False):
-        updated_args = []
-        for arg in args:
-            if arg.startswith('$'):
-                arg = app.env.get(arg[1:])
-            updated_args.append(arg)
-        for line in sh.env(*entry_point, *updated_args, _env=app.env.copy(), _timeout=timeout, _iter=True, _bg_exc=False):
-            app.log.debug(f"{entry_point} :: {line.strip()}")
+        if len(entry_point) > 1:
+            raise SpecProcessException(
+                f"To many values in {entry_point}, should only contain a single item."
+            )
+
+        updated_args = self.convert_to_env(args)
+        for line in sh.env(
+            *entry_point,
+            *updated_args,
+            _env=app.env.copy(),
+            _timeout=timeout,
+            _iter=True,
+            _bg_exc=False,
+        ):
+            app.log.debug(f"{entry_point[-1]} :: {line.strip()}")
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
         """ Process a text blob and stores it to a file
@@ -200,9 +226,7 @@ class Runner(SpecPlugin):
             )
 
         if args and not entry_point:
-            raise SpecConfigException(
-                "Can't have args without an entry_point."
-            )
+            raise SpecConfigException("Can't have args without an entry_point.")
 
         if retries and timeout:
             raise SpecConfigException(
@@ -218,8 +242,9 @@ class Runner(SpecPlugin):
             raise SpecConfigException("An executable is required with `run_script`")
 
         if env_requires and any(envvar not in app.env for envvar in env_requires):
-            raise SpecConfigException("One or more of the required environment variables do not exist, please double check your spec.")
-
+            raise SpecConfigException(
+                f"One or more of the required environment variables do not exist, please double check your spec.\n{pformat(env_requires)}"
+            )
 
     def process(self):
         run = self.get_plugin_option("run")
@@ -236,6 +261,7 @@ class Runner(SpecPlugin):
         wait_for_success = self.get_plugin_option("wait_for_success")
         back_off = self.get_plugin_option("back_off")
         retries = self.get_plugin_option("retries")
+        fail_silently = self.get_plugin_option("fail_silently")
 
         if timeout:
             start_time = datetime.datetime.now()
@@ -275,6 +301,9 @@ class Runner(SpecPlugin):
         except sh.TimeoutException as error:
             raise SpecProcessException(f"Running > {name} - FAILED\nTimeout Exceeded")
         except sh.ErrorReturnCode as error:
+            if fail_silently and not wait_for_success:
+                app.log.error(f"Running > {name} - FAILED (silently) - {error}")
+                return
             if wait_for_success:
                 app.log.debug(f"Running > {name}: wait for success initiated.")
                 while wait_for_success and retries <= retries_count:
@@ -399,7 +428,7 @@ class Runner(SpecPlugin):
         #!/bin/bash
         set -eux
 
-        juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER"
+        juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER
         \"\"\"
         timeout = 180
         tags = ["teardown"]

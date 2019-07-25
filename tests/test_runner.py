@@ -37,6 +37,21 @@ pytest_configs = '-ra -n 5'
 '''
 destination = '/tmp/pytest.ini'
 is_executable = true
+
+
+[[Runner]]
+name = "Sync K8s snaps"
+description = \"\"\"
+Pull down upstream release tags and make sure our launchpad git repo has those
+tags synced. Next, we push any new releases (major, minor, or patch) to the
+launchpad builders for building the snaps from source and uploading to the snap
+store.
+\"\"\"
+deps = ["pip:requirements.txt"]
+env_requires = ["SNAP_LIST"]
+entry_point = ["python3", "snap.py"]
+args = ["sync-upstream", "--snap-list", "$SNAP_LIST"]
+tags = ["sync"]
 """
 )
 
