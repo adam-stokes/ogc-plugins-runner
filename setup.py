@@ -6,7 +6,7 @@ README = README.read_text(encoding="utf8")
 
 setuptools.setup(
     name="ogc-plugins-runner",
-    version="0.0.7",
+    version="0.0.8",
     author="Adam Stokes",
     author_email="adam.stokes@ubuntu.com",
     description="ogc-plugins-runner, a ogc plugin for runners",
