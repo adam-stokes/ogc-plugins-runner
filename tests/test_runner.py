@@ -72,6 +72,7 @@ SUPPORTED_OPTIONS = [
     "run_script",
     "timeout",
     "wait_for_success",
+    "fail_silently"
 ]
 
 
@@ -82,14 +83,14 @@ def runners():
     return [task for runner in spec_toml.keys() for task in spec_toml[runner]]
 
 
-def test_nested_runner_assets(runners):
+def test_nested_runner_assets(runners, mocker):
     """ Test that nested runner assets are associated with correct runner task
     """
+    mocker.patch("ogc.state.app.log")
     for task in runners:
         spec = Runner(task, spec_toml)
         name = spec.get_plugin_option("name")
         assets = spec.get_plugin_option("assets")
-
         if name == "a runner":
             if assets:
                 assert assets[0]["name"] == "pytest config"
