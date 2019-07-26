@@ -72,7 +72,7 @@ SUPPORTED_OPTIONS = [
     "run_script",
     "timeout",
     "wait_for_success",
-    "fail_silently"
+    "fail_silently",
 ]
 
 

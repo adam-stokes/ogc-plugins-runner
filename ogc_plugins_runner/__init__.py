@@ -170,12 +170,7 @@ class Runner(SpecPlugin):
                 app.log.debug(f"{executable} :: {line.strip()}")
 
     def _run_entry_point(self, entry_point, args, timeout=None, concurrent=False):
-        if len(entry_point) > 1:
-            raise SpecProcessException(
-                f"To many values in {entry_point}, should only contain a single item."
-            )
-
-        updated_args = self.convert_to_env(args)
+        updated_args = self._convert_to_env(args)
         for line in sh.env(
             *entry_point,
             *updated_args,
@@ -355,7 +350,7 @@ class Runner(SpecPlugin):
         \"\"\"
         deps = ["pip:requirements.txt"]
         env_requires = ["SNAP_LIST"]
-        entry_point = ["python3", "snap.py"]
+        entry_point = ["python3", "-m", "snap.py"]
         args = ["sync-upstream", "--snap-list", "$SNAP_LIST"]
         tags = ["sync"]
 
