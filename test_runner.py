@@ -1,7 +1,7 @@
 from pathlib import Path
 import pytest
 import toml
-from ogc_plugins_runner import Runner
+from runner import Runner
 
 spec_toml = toml.loads(
     """

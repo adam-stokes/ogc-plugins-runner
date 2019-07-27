@@ -15,6 +15,16 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
+__version__ = "1.0.0"
+__author__ = "Adam Stokes"
+__author_email__ = "adam.stokes@gmail.com"
+__maintainer__ = "Adam Stokes"
+__maintainer_email__ = "adam.stokes@gmail.com"
+__description__ = (
+    "ogc-plugins-runner, an ogc plugin for running scripts, applications, etc."
+)
+__git_repo__ = "https://github.com/battlemidget/ogc-plugins-runner"
+
 
 class Runner(SpecPlugin):
     friendly_name = "OGC Runner Plugin"
@@ -170,7 +180,10 @@ class Runner(SpecPlugin):
                 app.log.debug(f"{executable} :: {line.strip()}")
 
     def _run_entry_point(self, entry_point, args, timeout=None, concurrent=False):
-        updated_args = self._convert_to_env(args)
+        if not args:
+            updated_args = []
+        else:
+            updated_args = self._convert_to_env(args)
         for line in sh.env(
             *entry_point,
             *updated_args,
@@ -269,7 +282,10 @@ class Runner(SpecPlugin):
             retries = 0
         retries_count = 0
 
-        app.log.info(f"Running > {name}\n -- {description.strip()}")
+        if description:
+            app.log.info(f"Running > {name}\n -- {description.strip()}")
+        else:
+            app.log.info(f"Running > {name}")
         if assets:
             app.log.info(f"Generating Assets")
             for asset in assets:
