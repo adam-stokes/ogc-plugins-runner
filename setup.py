@@ -1,5 +1,5 @@
 import setuptools
-import runner as package
+import ogc_plugins_runner as package
 from pathlib import Path
 
 README = Path(__file__).parent.absolute() / "readme.md"
@@ -15,6 +15,6 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url=package.__git_repo__,
     py_modules=[package.__name__],
-    entry_points={"ogc.plugins": "Runner = runner:Runner"},
+    entry_points={"ogc.plugins": "Runner = ogc_plugins_runner:Runner"},
     install_requires=["ogc>=0.1.5,<1.0.0", "click>=7.0.0,<8.0.0", "sh>=1.12,<2.0"],
 )
