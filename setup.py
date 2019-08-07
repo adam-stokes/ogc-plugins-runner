@@ -6,7 +6,7 @@ README = Path(__file__).parent.absolute() / "readme.md"
 README = README.read_text(encoding="utf8")
 
 setuptools.setup(
-    name="ogc-plugins-runner",
+    name=package.__plugin_name__,
     version=package.__version__,
     author=package.__author__,
     author_email=package.__author_email__,

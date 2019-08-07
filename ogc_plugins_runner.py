@@ -1,9 +1,3 @@
-"""
----
-targets: ['docs/plugins/runner.md']
----
-"""
-
 import tempfile
 import sh
 import os
@@ -21,10 +15,67 @@ __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
 __maintainer_email__ = "adam.stokes@gmail.com"
+__license__ = "MIT"
+__plugin_name__ = "ogc-plugins-runner"
 __description__ = (
     "ogc-plugins-runner, an ogc plugin for running scripts, applications, etc."
 )
 __git_repo__ = "https://github.com/battlemidget/ogc-plugins-runner"
+__ci_status__ = """
+[![Build Status](https://travis-ci.org/battlemidget/ogc-plugins-runner.svg?branch=master)](https://travis-ci.org/battlemidget/ogc-plugins-runner)
+"""
+
+__example__ = """
+
+## Example 1
+
+```yaml
+meta:
+  name: A test spec
+
+plan:
+  - runner:
+      description: This has some env variables mixed into cmd
+      cmd: echo $BONZAI l$ANOTHERTIME env$VAR_NICE $CONTROLLER:$MODEL $CONTROLLER $MODEL
+  - runner:
+      description: Test ogc core
+      cmd: pytest
+      tags: [dist, clean]
+  - runner:
+      description: cleanup artifacts
+      cmd: rm -rf build dist ogc.egg-info
+      tags: [dist, clean]
+  - runner:
+      description: Bump revision
+      cmd: punch --part patch
+      tags: [bdist]
+      assets:
+        - name: pytest configuration
+          source-file: data/pytest.ini
+          destination: jobs/pytest.ini
+          is-executable: no
+  - runner:
+      description: Build dist
+      cmd: python3 setup.py bdist_wheel
+      tags: [bdist]
+      assets:
+        - name: boom config
+          source-file: data/boom.ini
+          destiation: jobs/boom.ini
+          is-executable: yes
+  - runner:
+      description: Upload dist
+      cmd: twine upload dist/*
+      tags: [bdist]
+  - runner:
+      description: Running a script blob
+      script: |
+        #!/bin/bash
+
+        set -eux
+        echo "Hello from a script!" && exit 0
+```
+"""
 
 
 class Runner(SpecPlugin):
@@ -280,106 +331,6 @@ class Runner(SpecPlugin):
                 f"Running > {description} - FAILED\n{error.stderr.decode().strip()}"
             )
         app.log.info(f"Running > {description} - SUCCESS")
-
-    @classmethod
-    def doc_example(cls):
-        return textwrap.dedent(
-            """
-        ## Example
-
-        Variations of using entry points, script blob, and script files, with and without assets.
-
-        ```toml
-        [[Runner]]
-        name = "Sync K8s snaps"
-        description = \"\"\"
-        Pull down upstream release tags and make sure our launchpad git repo has those
-        tags synced. Next, we push any new releases (major, minor, or patch) to the
-        launchpad builders for building the snaps from source and uploading to the snap
-        store.
-        \"\"\"
-        deps = ["pip:requirements.txt"]
-        env_requires = ["SNAP_LIST"]
-        entry_point = ["python3", "-m", "snap.py"]
-        args = ["sync-upstream", "--snap-list", "$SNAP_LIST"]
-        tags = ["sync"]
-
-        [[Runner]]
-        name = 'Run pytest'
-        description = 'a description'
-        run_script = 'scripts/test-flaky'
-        deps = ['pip:pytest', 'pip:flaky>=3.0.0']
-
-        [[Runner.assets]]
-        name = 'pytest config'
-        source_file = 'data/pytest.ini'
-        destination = 'jobs/pytest.ini'
-        is_executable = false
-
-        [[Runner]]
-        name = "Running CNCF Conformance"
-        description = \"\"\"
-        See https://www.cncf.io/certification/software-conformance/ for more information.
-        \"\"\"
-        run = \"\"\"
-        #!/bin/bash
-        set -eux
-
-        mkdir -p $HOME/.kube
-        juju scp -m $JUJU_CONTROLLER:$JUJU_MODEL kubernetes-master/0:config $HOME/.kube/
-        export RBAC_ENABLED=$(kubectl api-versions | grep \"rbac.authorization.k8s.io/v1beta1\" -c)
-        kubectl version
-        sonobuoy version
-        sonobuoy run
-        \"\"\"
-
-        tags = ["cncf", "cncf-run"]
-
-        [[Runner]]
-        name = "Waiting for Sonobuoy to complete"
-        description = \"\"\"
-        See https://www.cncf.io/certification/software-conformance/ for more information.
-        \"\"\"
-        run = \"\"\"
-        #!/bin/bash
-        set -eux
-
-        sonobuoy status|grep -q 'Sonobuoy has completed'
-        \"\"\"
-        wait_for_success = true
-        timeout = 10800
-        back_off = 15
-        tags = ["cncf", "cncf-wait-status"]
-
-        [[Runner]]
-        name = "Downloading conformance results"
-        description = "Download results"
-        run = \"\"\"
-        #!/bin/bash
-        set -eux
-
-        sonobuoy retrieve results/.
-        kubectl version
-        \"\"\"
-        wait_for_success = true
-        back_off = 5
-        retries = 5
-        tags = ["cncf", "cncf-download-results"]
-
-        [[Runner]]
-        name = "Tearing down deployment"
-        description = "Tear down juju"
-        run = \"\"\"
-        #!/bin/bash
-        set -eux
-
-        juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER
-        \"\"\"
-        timeout = 180
-        tags = ["teardown"]
-        ```
-        """
-        )
 
 
 __class_plugin_obj__ = Runner
