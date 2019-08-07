@@ -4,18 +4,13 @@ meta:
 
 plan:
   - runner:
-      description: cleanup artifacts
-      cmd: rm -rf build dist ogc.egg-info
-      tags: [dist, clean, bdist]
-      fail-silently: yes
-  - runner:
       description: prettyify
       cmd: black .
-      tags: [dist, clean, bdist]
+      tags: [dist, bdist]
   - runner:
       description: Test ogc core
       cmd: pytest
-      tags: [dist, clean, bdist]
+      tags: [dist, bdist]
   - runner:
       description: Bump revision
       cmd: punch --part patch
@@ -28,3 +23,7 @@ plan:
       description: Upload dist
       cmd: twine upload dist/*
       tags: [bdist]
+  - runner:
+      description: cleanup artifacts
+      cmd: rm -rf build dist ogc_plugins_runner.egg-info __pycache__
+      tags: [dist, clean, bdist]
