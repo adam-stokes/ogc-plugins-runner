@@ -6,38 +6,31 @@ runner plugin for ogc
 
 # usage
 
-In a ogc spec, place the following:
+In a ogc spec, place the following in one of the supported phases (**setup, plan, teardown**):
 
-```toml
-[[Runner]]
-name = 'a runner'
-description = 'a description'
-run_script = 'scripts/test-flaky'
-deps = ['pip:pytest', 'pip:flaky>=3.0.0']
+```yaml
+setup:
+  - env:
+      properties-file: .env
+  - runner:
+      description: Hello there
+      cmd: echo "HELLO WORLDZ"
 
-[[Runner.assets]]
-name = 'pytest config'
-source_file = 'data/pytest.ini'
-destination = 'jobs/pytest.ini'
-is_executable = false
-
-[[Runner]]
-name = 'second runner'
-run = '''
-#!/bin/bash
-set -eux
-echo 'BOOYA'
-'''
-deps = ['snap:juju']
-
-[[Runner.assets]]
-name = 'ini file'
-source_blob = '''
-[pytest]
-pytest_configs = '-ra -n 5'
-'''
-destination = '/tmp/pytest.ini'
-is_executable = true
+plan:
+  - runner:
+      description: "Full validation of charmed kubernetes"
+      fail-silently: yes
+      script: |
+        #!/bin/bash
+        pytest validations/tests/validation.py \
+           --connection $JUJU_CONTROLLER:$JUJU_MODEL \
+           --cloud $JUJU_CLOUD \
+           --bunndle-channel $JUJU_DEPLOY_CHANNEL \
+           --snap-channel $SNAP_VERSION
+teardown:
+  - runner:
+      description: Tear down juju deployment
+      cmd: juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER
 ```
 
-# see `ogc spec-doc Runner` for more information.
+### see `ogc spec-doc runner` for more information.
