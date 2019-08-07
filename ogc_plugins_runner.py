@@ -10,12 +10,13 @@ import os
 import datetime
 import textwrap
 import re
+import shlex
 from pprint import pformat
 from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.1"
+__version__ = "1.0.3"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -28,44 +29,27 @@ __git_repo__ = "https://github.com/battlemidget/ogc-plugins-runner"
 
 class Runner(SpecPlugin):
     friendly_name = "OGC Runner Plugin"
-    description = (
-        "Allow running of shell scripts, and other scripts "
-        "where the runner has access to the executable"
-    )
-
     options = [
+        {
+            "key": "description",
+            "required": True,
+            "description": "Description of the running task",
+        },
+
         {
             "key": "concurrent",
             "required": False,
             "description": "Allow this runner to run concurrenty in the background",
         },
         {
-            "key": "entry_point",
+            "key": "cmd",
             "required": False,
-            "description": "A list of arguments to act as the entry point",
+            "description": "A command to run",
         },
         {
-            "key": "args",
-            "required": False,
-            "description": "A list of arguments to pass to an `entry_point`",
-        },
-        {
-            "key": "run",
+            "key": "script",
             "required": False,
             "description": "A blob of text to execute, usually starts with a shebang interpreter",
-        },
-        {
-            "key": "run_script",
-            "required": False,
-            "description": "Path to a excutable script",
-        },
-        {
-            "key": "executable",
-            "required": False,
-            "description": (
-                "Must be set when using `run_script`, this "
-                "is the binary to run the script with, (ie. python3)"
-            ),
         },
         {
             "key": "timeout",
@@ -73,7 +57,7 @@ class Runner(SpecPlugin):
             "description": "Do not exceed this timeout in seconds",
         },
         {
-            "key": "wait_for_success",
+            "key": "wait-for-success",
             "required": False,
             "description": (
                 "Wait for this runner to be successfull, will retry. "
@@ -82,7 +66,7 @@ class Runner(SpecPlugin):
             ),
         },
         {
-            "key": "fail_silently",
+            "key": "fail-silently",
             "required": False,
             "description": (
                 "Do not halt on a failed runner, this will print an error"
@@ -91,7 +75,7 @@ class Runner(SpecPlugin):
             ),
         },
         {
-            "key": "back_off",
+            "key": "back-off",
             "required": False,
             "description": "Time in seconds to wait between retries",
         },
@@ -99,12 +83,12 @@ class Runner(SpecPlugin):
         {"key": "assets", "required": False, "description": "Assets configuration"},
         {"key": "assets.name", "required": False, "description": "Name of asset"},
         {
-            "key": "assets.source_file",
+            "key": "assets.source-file",
             "required": False,
             "description": "A file to act on, (ie. a configuration file)",
         },
         {
-            "key": "assets.source_blob",
+            "key": "assets.source-blob",
             "required": False,
             "description": "A text blob of a file to use",
         },
@@ -114,7 +98,7 @@ class Runner(SpecPlugin):
             "description": "Where to output this asset, (ie. saving a pytest.ini blob to a tests directory)",
         },
         {
-            "key": "assets.is_executable",
+            "key": "assets.is-executable",
             "required": False,
             "description": "Make this asset executable",
         },
@@ -129,7 +113,7 @@ class Runner(SpecPlugin):
     def _tempfile(self):
         return tempfile.mkstemp()
 
-    def _run(self, script_data, timeout=None, concurrent=False):
+    def _run_script(self, script_data, timeout=None, concurrent=False):
         tmp_script = self._tempfile
         tmp_script_path = Path(tmp_script[-1])
         tmp_script_path.write_text(script_data, encoding="utf8")
@@ -153,16 +137,11 @@ class Runner(SpecPlugin):
             ):
                 app.log.debug(f"run :: {line.strip()}")
 
-    def _run_script(self, executable, path, timeout=None, concurrent=False):
-        script_path = Path(path)
-        if not script_path.exists():
-            raise SpecProcessException(f"Unable to find file {script_path}")
-        if not sh.which(executable):
-            raise SpecProcessException(f"Unable to find executable {executable}")
+    def _run_cmd(self, cmd, timeout=None, concurrent=False):
+        cmd = list(shlex.shlex(cmd, punctuation_chars=True))
+        app.log.debug(f"Running {self.opt('description').strip()} cmd > `{cmd}`")
         if concurrent:
-            cmd = sh.env(
-                executable,
-                str(script_path),
+            cmd = sh.env(*cmd,
                 _env=app.env.copy(),
                 _timeout=timeout,
                 _bg=concurrent,
@@ -170,29 +149,13 @@ class Runner(SpecPlugin):
             cmd.wait()
         else:
             for line in sh.env(
-                executable,
-                str(script_path),
+                    *cmd,
                 _env=app.env.copy(),
                 _timeout=timeout,
                 _iter=True,
                 _bg_exc=False,
             ):
-                app.log.debug(f"{executable} :: {line.strip()}")
-
-    def _run_entry_point(self, entry_point, args, timeout=None, concurrent=False):
-        if not args:
-            updated_args = []
-        else:
-            updated_args = self._convert_to_env(args)
-        for line in sh.env(
-            *entry_point,
-            *updated_args,
-            _env=app.env.copy(),
-            _timeout=timeout,
-            _iter=True,
-            _bg_exc=False,
-        ):
-            app.log.debug(f"{entry_point[-1]} :: {line.strip()}")
+                app.log.debug(f" -- {line.strip()}")
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
         """ Process a text blob and stores it to a file
@@ -219,35 +182,29 @@ class Runner(SpecPlugin):
         tmp_path.rename(destination)
 
     def conflicts(self):
-        run = self.get_plugin_option("run")
-        run_script = self.get_plugin_option("run_script")
-        entry_point = self.get_plugin_option("entry_point")
-        args = self.get_plugin_option("args")
-        executable = self.get_plugin_option("executable")
-        retries = self.get_plugin_option("retries")
-        timeout = self.get_plugin_option("timeout")
-        env_requires = self.get_plugin_option("env_requires")
+        cmd = self.opt("cmd")
+        script = self.opt("script")
+        retries = self.opt("retries")
+        timeout = self.opt("timeout")
+        env_requires = self.opt("env-requires")
 
-        if entry_point and (run or run_script):
+        if not (cmd or script):
             raise SpecConfigException(
-                "Can only have entry_point OR run || run_script not both."
+                "Must have a `cmd` or a `script` defined."
             )
-
-        if args and not entry_point:
-            raise SpecConfigException("Can't have args without an entry_point.")
 
         if retries and timeout:
             raise SpecConfigException(
                 "Can only have retries OR a timeout defined, not both."
             )
 
-        if run and run_script:
+        if cmd and script:
             raise SpecConfigException(
-                "Can only have one instance of `run` or `run_script`"
+                "Can only have one instance of `cmd` or `script`"
             )
 
-        if run_script and not executable:
-            raise SpecConfigException("An executable is required with `run_script`")
+        if script and not script.startswith('#!'):
+            raise SpecConfigException("Missing shebang in `script`, unable to determine how to execute script.")
 
         if env_requires and any(envvar not in app.env for envvar in env_requires):
             raise SpecConfigException(
@@ -255,21 +212,16 @@ class Runner(SpecPlugin):
             )
 
     def process(self):
-        run = self.get_plugin_option("run")
-        run_script = self.get_plugin_option("run_script")
-        entry_point = self.get_plugin_option("entry_point")
-        args = self.get_plugin_option("args")
-        timeout = self.get_plugin_option("timeout")
-        until = self.get_plugin_option("until")
-        executable = self.get_plugin_option("executable")
-        name = self.get_plugin_option("name")
-        concurrent = self.get_plugin_option("concurrent")
-        description = self.get_plugin_option("description")
-        assets = self.get_plugin_option("assets")
-        wait_for_success = self.get_plugin_option("wait_for_success")
-        back_off = self.get_plugin_option("back_off")
-        retries = self.get_plugin_option("retries")
-        fail_silently = self.get_plugin_option("fail_silently")
+        cmd = self.opt("cmd")
+        script = self.opt("script")
+        timeout = self.opt("timeout")
+        concurrent = self.opt("concurrent")
+        description = self.opt("description").strip()
+        assets = self.opt("assets")
+        wait_for_success = self.opt("wait-for-success")
+        back_off = self.opt("back-off")
+        retries = self.opt("retries")
+        fail_silently = self.opt("fail-silently")
 
         if timeout:
             start_time = datetime.datetime.now()
@@ -282,70 +234,65 @@ class Runner(SpecPlugin):
             retries = 0
         retries_count = 0
 
-        if description:
-            app.log.info(f"Running > {name}\n -- {description.strip()}")
-        else:
-            app.log.info(f"Running > {name}")
+        app.log.info(f"Running > {description}")
         if assets:
-            app.log.info(f"Generating Assets")
+            app.log.info(f"Running > {description} : building assets")
             for asset in assets:
-                is_executable = asset.get("is_executable", False)
-                if "source_blob" in asset:
+                is_executable = asset.get("is-executable", False)
+                if "source-blob" in asset:
                     self._handle_source_blob(
-                        asset["source_blob"], asset["destination"], is_executable
+                        asset["source-blob"], asset["destination"], is_executable
                     )
-                elif "source_file" in asset:
+                elif "source-file" in asset:
                     self._handle_source_file(
-                        asset["source_file"], asset["destination"], is_executable
+                        asset["source-file"], asset["destination"], is_executable
                     )
 
         def _do_run():
-            if run:
-                self._run(run, timeout, concurrent=concurrent)
-            elif run_script:
-                self._run_script(executable, run_script, timeout, concurrent=concurrent)
-            elif entry_point:
-                self._run_entry_point(entry_point, args, timeout, concurrent=concurrent)
+            if cmd:
+                self._run_cmd(cmd, timeout, concurrent=concurrent)
+            elif script:
+                self._run_script(script, timeout, concurrent=concurrent)
 
         try:
             _do_run()
         except sh.TimeoutException as error:
-            raise SpecProcessException(f"Running > {name} - FAILED\nTimeout Exceeded")
+            raise SpecProcessException(f"Running > {description} - FAILED\nTimeout Exceeded")
         except sh.ErrorReturnCode as error:
             if fail_silently and not wait_for_success:
-                app.log.error(f"Running > {name} - FAILED (silently) - {error}")
+                app.log.error(f"Running > {description} - FAILED (silently) - {error}")
                 return
             if wait_for_success:
-                app.log.debug(f"Running > {name}: wait for success initiated.")
+                app.log.debug(f"Running > {description}: wait for success initiated.")
                 while wait_for_success and retries <= retries_count:
-                    app.log.debug(f"Running > {name}: retrying command.")
+                    app.log.debug(f"Running > {description}: retrying command.")
                     if timeout_delta:
                         current_time = datetime.datetime.now()
                         time_left = timeout_delta - current_time
                         app.log.debug(
-                            f"Running > {name}: will timeout in {time_left.seconds} seconds."
+                            f"Running > {description}: will timeout in {time_left.seconds} seconds."
                         )
                         if timeout_delta < current_time:
                             raise SpecProcessException(
-                                f"Running > {name} - FAILED\nTimeout Exceeded"
+                                f"Running > {description} - FAILED\nTimeout Exceeded"
                             )
                     if back_off:
                         app.log.info(
-                            f"Running > {name}: sleeping for {back_off} seconds, retrying."
+                            f"Running > {description}: sleeping for {back_off} seconds, retrying."
                         )
                         sh.sleep(back_off)
                     try:
                         _do_run()
                     except sh.ErrorReturnCode as error:
                         app.log.debug(
-                            f"Running > {name}: failure detected, initiating retry."
+                            f"Running > {description}: failure detected, initiating retry."
                         )
                     retries_count += 1
 
             raise SpecProcessException(
-                f"Running > {name} - FAILED\n{error.stderr.decode().strip()}"
+                f"Running > {description} - FAILED\n{error.stderr.decode().strip()}"
             )
-        app.log.info(f"Running > {name} - SUCCESS")
+        app.log.info(f"Running > {description} - SUCCESS")
 
     @classmethod
     def doc_example(cls):

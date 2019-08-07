@@ -1,0 +1,37 @@
+meta:
+  name: A test spec
+
+plan:
+  - runner:
+      description: This has some env variables mixed into cmd
+      cmd: echo $BONZAI l$ANOTHERTIME env$VAR_NICE $CONTROLLER:$MODEL $CONTROLLER $MODEL
+  - runner:
+      description: Test ogc core
+      cmd: pytest
+      tags: [dist, clean]
+  - runner:
+      description: cleanup artifacts
+      cmd: rm -rf build dist ogc.egg-info
+      tags: [dist, clean]
+  - runner:
+      description: Bump revision
+      cmd: punch --part patch
+      tags: [bdist]
+      assets:
+        - name: pytest configuration
+          source-file: data/pytest.ini
+          destination: jobs/pytest.ini
+          is-executable: no
+  - runner:
+      description: Build dist
+      cmd: python3 setup.py bdist_wheel
+      tags: [bdist]
+      assets:
+        - name: boom config
+          source-file: data/boom.ini
+          destiation: jobs/boom.ini
+          is-executable: yes
+  - runner:
+      description: Upload dist
+      cmd: twine upload dist/*
+      tags: [bdist]
