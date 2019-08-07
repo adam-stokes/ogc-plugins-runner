@@ -16,7 +16,7 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -178,13 +178,13 @@ class Runner(SpecPlugin):
         if not (cmd or script):
             raise SpecConfigException("Must have a `cmd` or a `script` defined.")
 
+        if cmd and script:
+            raise SpecConfigException("Can only have one instance of `cmd` or `script`")
+
         if retries and timeout:
             raise SpecConfigException(
                 "Can only have retries OR a timeout defined, not both."
             )
-
-        if cmd and script:
-            raise SpecConfigException("Can only have one instance of `cmd` or `script`")
 
         if script and not script.startswith("#!"):
             raise SpecConfigException(
