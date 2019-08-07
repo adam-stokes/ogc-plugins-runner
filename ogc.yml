@@ -1,0 +1,30 @@
+meta:
+  name: build spec
+  description: tasks for runner plugin
+
+plan:
+  - runner:
+      description: cleanup artifacts
+      cmd: rm -rf build dist ogc.egg-info
+      tags: [dist, clean, bdist]
+      fail-silently: yes
+  - runner:
+      description: prettyify
+      cmd: black .
+      tags: [dist, clean, bdist]
+  - runner:
+      description: Test ogc core
+      cmd: pytest
+      tags: [dist, clean, bdist]
+  - runner:
+      description: Bump revision
+      cmd: punch --part patch
+      tags: [bdist]
+  - runner:
+      description: Build dist
+      cmd: python3 setup.py bdist_wheel
+      tags: [bdist]
+  - runner:
+      description: Upload dist
+      cmd: twine upload dist/*
+      tags: [bdist]
