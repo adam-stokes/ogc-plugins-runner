@@ -16,7 +16,7 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -35,17 +35,12 @@ class Runner(SpecPlugin):
             "required": True,
             "description": "Description of the running task",
         },
-
         {
             "key": "concurrent",
             "required": False,
             "description": "Allow this runner to run concurrenty in the background",
         },
-        {
-            "key": "cmd",
-            "required": False,
-            "description": "A command to run",
-        },
+        {"key": "cmd", "required": False, "description": "A command to run"},
         {
             "key": "script",
             "required": False,
@@ -141,19 +136,11 @@ class Runner(SpecPlugin):
         cmd = list(shlex.shlex(cmd, punctuation_chars=True))
         app.log.debug(f"Running {self.opt('description').strip()} cmd > `{cmd}`")
         if concurrent:
-            cmd = sh.env(*cmd,
-                _env=app.env.copy(),
-                _timeout=timeout,
-                _bg=concurrent,
-            )
+            cmd = sh.env(*cmd, _env=app.env.copy(), _timeout=timeout, _bg=concurrent)
             cmd.wait()
         else:
             for line in sh.env(
-                    *cmd,
-                _env=app.env.copy(),
-                _timeout=timeout,
-                _iter=True,
-                _bg_exc=False,
+                *cmd, _env=app.env.copy(), _timeout=timeout, _iter=True, _bg_exc=False
             ):
                 app.log.debug(f" -- {line.strip()}")
 
@@ -189,9 +176,7 @@ class Runner(SpecPlugin):
         env_requires = self.opt("env-requires")
 
         if not (cmd or script):
-            raise SpecConfigException(
-                "Must have a `cmd` or a `script` defined."
-            )
+            raise SpecConfigException("Must have a `cmd` or a `script` defined.")
 
         if retries and timeout:
             raise SpecConfigException(
@@ -199,12 +184,12 @@ class Runner(SpecPlugin):
             )
 
         if cmd and script:
-            raise SpecConfigException(
-                "Can only have one instance of `cmd` or `script`"
-            )
+            raise SpecConfigException("Can only have one instance of `cmd` or `script`")
 
-        if script and not script.startswith('#!'):
-            raise SpecConfigException("Missing shebang in `script`, unable to determine how to execute script.")
+        if script and not script.startswith("#!"):
+            raise SpecConfigException(
+                "Missing shebang in `script`, unable to determine how to execute script."
+            )
 
         if env_requires and any(envvar not in app.env for envvar in env_requires):
             raise SpecConfigException(
@@ -257,7 +242,9 @@ class Runner(SpecPlugin):
         try:
             _do_run()
         except sh.TimeoutException as error:
-            raise SpecProcessException(f"Running > {description} - FAILED\nTimeout Exceeded")
+            raise SpecProcessException(
+                f"Running > {description} - FAILED\nTimeout Exceeded"
+            )
         except sh.ErrorReturnCode as error:
             if fail_silently and not wait_for_success:
                 app.log.error(f"Running > {description} - FAILED (silently) - {error}")
