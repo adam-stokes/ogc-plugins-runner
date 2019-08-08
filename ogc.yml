@@ -8,7 +8,7 @@ plan:
       cmd: black .
       tags: [dist, bdist]
   - runner:
-      description: Test ogc core
+      description: Test plugin
       cmd: pytest
       tags: [dist, bdist]
   - runner:
