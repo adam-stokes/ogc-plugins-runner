@@ -1,9 +1,11 @@
 from pathlib import Path
 import pytest
 import yaml
+import os
 from pathlib import Path
 from ogc_plugins_runner import Runner
-from ogc.spec import SpecLoader, SpecPlugin
+from ogc.spec import SpecLoader, SpecPlugin, SpecConfigException
+from ogc.state import app
 
 fixtures_dir = Path(__file__).parent / "fixtures"
 
@@ -81,3 +83,24 @@ def test_runner_supported_options(runners):
     spec_options.sort()
     SUPPORTED_OPTIONS.sort()
     assert set(spec_options) == set(SUPPORTED_OPTIONS)
+
+
+def test_env_requires(runners, mocker):
+    """ Make sure env-requires works as expected
+    """
+    mocker.patch("ogc.state.app.log")
+    spec = SpecLoader.load([fixtures_dir / "spec.yml"])
+    for task in runners:
+        if "env-requires" in task["runner"]:
+            spec = Runner("plan", task["runner"], spec)
+            with pytest.raises(SpecConfigException):
+                spec.conflicts()
+
+            app.env["RUNNER_OPT"] = "YES"
+            with pytest.raises(SpecConfigException) as exc_info:
+                spec.conflicts()
+            assert (
+                "ANOTHER_OPT, TEST_ENV are missing from the "
+                "required environment variables, please make "
+                "sure those are loaded prior to running."
+            ) == str(exc_info.value)

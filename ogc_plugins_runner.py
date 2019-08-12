@@ -243,8 +243,9 @@ class Runner(SpecPlugin):
             )
 
         if env_requires and any(envvar not in app.env for envvar in env_requires):
+            missing_envs = ", ".join(list(set(env_requires).difference(set(app.env))))
             raise SpecConfigException(
-                f"One or more of the required environment variables do not exist, please double check your spec.\n{pformat(env_requires)}"
+                f"{missing_envs} are missing from the required environment variables, please make sure those are loaded prior to running."
             )
 
     def process(self):
