@@ -243,7 +243,7 @@ class Runner(SpecPlugin):
             )
 
         if env_requires and any(envvar not in app.env for envvar in env_requires):
-            missing_envs = ", ".join(list(set(env_requires).difference(set(app.env))))
+            missing_envs = ", ".join(sorted(list(set(env_requires).difference(set(app.env)))))
             raise SpecConfigException(
                 f"{missing_envs} are missing from the required environment variables, please make sure those are loaded prior to running."
             )
