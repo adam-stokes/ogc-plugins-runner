@@ -224,7 +224,6 @@ class Runner(SpecPlugin):
         script = self.opt("script")
         retries = self.opt("retries")
         timeout = self.opt("timeout")
-        env_requires = self.opt("env-requires")
 
         if not (cmd or script):
             raise SpecConfigException("Must have a `cmd` or a `script` defined.")
@@ -242,11 +241,6 @@ class Runner(SpecPlugin):
                 "Missing shebang in `script`, unable to determine how to execute script."
             )
 
-        if env_requires and any(envvar not in app.env for envvar in env_requires):
-            missing_envs = ", ".join(sorted(list(set(env_requires).difference(set(app.env)))))
-            raise SpecConfigException(
-                f"{missing_envs} are missing from the required environment variables, please make sure those are loaded prior to running."
-            )
 
     def process(self):
         cmd = self.opt("cmd")
