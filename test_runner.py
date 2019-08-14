@@ -23,7 +23,6 @@ SUPPORTED_OPTIONS = [
     "script",
     "timeout",
     "wait-for-success",
-    "fail-silently",
     "description",
 ]
 

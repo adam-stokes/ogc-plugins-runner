@@ -112,15 +112,6 @@ class Runner(SpecPlugin):
             ),
         },
         {
-            "key": "fail-silently",
-            "required": False,
-            "description": (
-                "Do not halt on a failed runner, this will print an error"
-                "that can be logged for ci runs, but still allow all "
-                "runners in a spec to complete."
-            ),
-        },
-        {
             "key": "back-off",
             "required": False,
             "description": "Time in seconds to wait between retries",
@@ -241,7 +232,6 @@ class Runner(SpecPlugin):
                 "Missing shebang in `script`, unable to determine how to execute script."
             )
 
-
     def process(self):
         cmd = self.opt("cmd")
         script = self.opt("script")
@@ -252,7 +242,6 @@ class Runner(SpecPlugin):
         wait_for_success = self.opt("wait-for-success")
         back_off = self.opt("back-off")
         retries = self.opt("retries")
-        fail_silently = self.opt("fail-silently")
 
         if timeout:
             start_time = datetime.datetime.now()
@@ -292,9 +281,6 @@ class Runner(SpecPlugin):
                 f"Running > {description} - FAILED\nTimeout Exceeded"
             )
         except sh.ErrorReturnCode as error:
-            if fail_silently and not wait_for_success:
-                app.log.error(f"Running > {description} - FAILED (silently) - {error}")
-                return
             if wait_for_success:
                 app.log.debug(f"Running > {description}: wait for success initiated.")
                 while wait_for_success and retries <= retries_count:
