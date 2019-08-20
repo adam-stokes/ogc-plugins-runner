@@ -10,7 +10,7 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.10"
+__version__ = "1.0.11"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -224,7 +224,6 @@ class Runner(SpecPlugin):
             raise SpecConfigException(
                 "Please add a `back-off: <sec>` option to the retry loop."
             )
-
 
     def process(self):
         cmd = self.opt("cmd")
