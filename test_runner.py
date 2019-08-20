@@ -77,7 +77,7 @@ def test_runner_supported_options(runners):
     test
     """
     spec = SpecLoader.load([fixtures_dir / "spec.yml"])
-    runner = Runner("plan", runners[0], spec)
+    runner = Runner("plan", runners[-2], spec)
     spec_options = [item["key"] for item in runner.options]
     spec_options.sort()
     SUPPORTED_OPTIONS.sort()

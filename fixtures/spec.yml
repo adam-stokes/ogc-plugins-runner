@@ -39,3 +39,40 @@ plan:
       description: Upload dist
       cmd: twine upload dist/*
       tags: [bdist]
+  - runner:
+      description: |
+        See https://www.cncf.io/certification/software-conformance/ for more information.
+      script: |
+        #!/bin/bash
+        set -eux
+
+        mkdir -p $HOME/.kube
+        juju scp -m $JUJU_CONTROLLER:$JUJU_MODEL kubernetes-master/0:config $HOME/.kube/
+        export RBAC_ENABLED=$(kubectl api-versions | grep \"rbac.authorization.k8s.io/v1beta1\" -c)
+        kubectl version
+        sonobuoy version
+        sonobuoy run
+      tags: [cncf, cncf-run]
+  - runner:
+      description: |
+        checking for completeness
+      cmd: sonobuoy status|grep -q 'Sonobuoy has completed'
+      timeout: 10800
+      back-off: 15
+      wait-for-success: yes
+      tags: [cncf, cncf-wait-status]
+  - runner:
+      description: Download results
+      script: |
+        #!/bin/bash
+        set -eux
+        sonobuoy retrieve results/.
+        kubectl version
+      wait-for-success: yes
+      back-off: 5
+      retries: 5
+      tags: [cncf, cncf-download-results]
+  - runner:
+      description: Tearing down all deployed applications
+      cmd: juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER
+      tags: [teardown]

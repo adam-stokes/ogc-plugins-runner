@@ -206,6 +206,8 @@ class Runner(SpecPlugin):
         script = self.opt("script")
         retries = self.opt("retries")
         timeout = self.opt("timeout")
+        back_off = self.opt("back-off")
+        wait_for_success = self.opt("wait-for-success")
 
         if not (cmd or script):
             raise SpecConfigException("Must have a `cmd` or a `script` defined.")
@@ -218,9 +220,15 @@ class Runner(SpecPlugin):
                 "Can only have retries OR a timeout defined, not both."
             )
 
+        if wait_for_success and not back_off:
+            raise SpecConfigException(
+                "Please add a `back-off: <sec>` option to the retry loop."
+            )
+
+
     def process(self):
         cmd = self.opt("cmd")
-        script = self.opt("script")
+        script = cmd if cmd else self.opt("script")
         timeout = self.opt("timeout")
         concurrent = self.opt("concurrent")
         description = self.opt("description").strip()
@@ -229,6 +237,7 @@ class Runner(SpecPlugin):
         back_off = self.opt("back-off")
         retries = self.opt("retries")
 
+        timeout_delta = None
         if timeout:
             start_time = datetime.datetime.now()
             timeout_delta = start_time + datetime.timedelta(seconds=timeout)
@@ -255,8 +264,6 @@ class Runner(SpecPlugin):
                     )
 
         def _do_run():
-            if cmd:
-                script = cmd
             self._run_script(script, timeout, concurrent=concurrent)
 
         try:
