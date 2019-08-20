@@ -10,7 +10,7 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.9"
+__version__ = "1.0.10"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -151,6 +151,8 @@ class Runner(SpecPlugin):
         return tempfile.mkstemp()
 
     def _run_script(self, script_data, timeout=None, concurrent=False):
+        if not script_data[:2] != "#!":
+            "#!/bin/bash\n" + script_data
         tmp_script = self._tempfile
         tmp_script_path = Path(tmp_script[-1])
         tmp_script_path.write_text(script_data, encoding="utf8")
@@ -173,18 +175,7 @@ class Runner(SpecPlugin):
                 _bg_exc=False,
             ):
                 app.log.debug(f"run :: {line.strip()}")
-
-    def _run_cmd(self, cmd, timeout=None, concurrent=False):
-        cmd = list(shlex.shlex(cmd, punctuation_chars=True))
-        app.log.debug(f"Running {self.opt('description').strip()} cmd > `{cmd}`")
-        if concurrent:
-            cmd = sh.env(*cmd, _env=app.env.copy(), _timeout=timeout, _bg=concurrent)
-            cmd.wait()
-        else:
-            for line in sh.env(
-                *cmd, _env=app.env.copy(), _timeout=timeout, _iter=True, _bg_exc=False
-            ):
-                app.log.debug(f" -- {line.strip()}")
+        sh.rm("-rf", tmp_script_path)
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
         """ Process a text blob and stores it to a file
@@ -227,11 +218,6 @@ class Runner(SpecPlugin):
                 "Can only have retries OR a timeout defined, not both."
             )
 
-        if script and not script.startswith("#!"):
-            raise SpecConfigException(
-                "Missing shebang in `script`, unable to determine how to execute script."
-            )
-
     def process(self):
         cmd = self.opt("cmd")
         script = self.opt("script")
@@ -270,9 +256,8 @@ class Runner(SpecPlugin):
 
         def _do_run():
             if cmd:
-                self._run_cmd(cmd, timeout, concurrent=concurrent)
-            elif script:
-                self._run_script(script, timeout, concurrent=concurrent)
+                script = cmd
+            self._run_script(script, timeout, concurrent=concurrent)
 
         try:
             _do_run()
