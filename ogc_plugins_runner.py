@@ -10,7 +10,7 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.11"
+__version__ = "1.0.12"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -151,6 +151,11 @@ class Runner(SpecPlugin):
         return tempfile.mkstemp()
 
     def _run_script(self, script_data, timeout=None, concurrent=False):
+        # preserve color
+        # script --flush \
+        #        --quiet \
+        #        --return /tmp/ansible-output.txt \
+        #        --command "my-ansible-command"
         if not script_data[:2] != "#!":
             "#!/bin/bash\n" + script_data
         tmp_script = self._tempfile
@@ -159,22 +164,28 @@ class Runner(SpecPlugin):
         self._make_executable(tmp_script_path)
         os.close(tmp_script[0])
         if concurrent:
-            cmd = sh.env(
-                str(tmp_script_path),
-                _env=app.env.copy(),
-                _timeout=timeout,
-                _bg=concurrent,
-            )
-            cmd.wait()
+            try:
+                cmd = sh.env(
+                    str(tmp_script_path),
+                    _env=app.env.copy(),
+                    _timeout=timeout,
+                    _bg=concurrent,
+                )
+                cmd.wait()
+            except sh.ErrorReturnCode as error:
+                raise SpecProcessException(error.stdout.decode())
         else:
-            for line in sh.env(
-                str(tmp_script_path),
-                _env=app.env.copy(),
-                _timeout=timeout,
-                _iter=True,
-                _bg_exc=False,
-            ):
-                app.log.debug(f"run :: {line.strip()}")
+            try:
+                for line in sh.env(
+                    str(tmp_script_path),
+                    _env=app.env.copy(),
+                    _timeout=timeout,
+                    _iter=True,
+                    _bg_exc=False,
+                ):
+                    app.log.info(line.strip())
+            except sh.ErrorReturnCode as error:
+                raise SpecProcessException(error.stdout.decode())
         sh.rm("-rf", tmp_script_path)
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
@@ -248,9 +259,9 @@ class Runner(SpecPlugin):
             retries = 0
         retries_count = 0
 
-        app.log.info(f"Running > {description}")
+        app.log.info(f"Running: {description}")
         if assets:
-            app.log.info(f"Running > {description} : building assets")
+            app.log.info(f"\tbuilding assets")
             for asset in assets:
                 is_executable = asset.get("is-executable", False)
                 if "source-blob" in asset:
@@ -268,41 +279,28 @@ class Runner(SpecPlugin):
         try:
             _do_run()
         except sh.TimeoutException as error:
-            raise SpecProcessException(
-                f"Running > {description} - FAILED\nTimeout Exceeded"
-            )
+            raise SpecProcessException(f"\ttimeout exceeded")
         except sh.ErrorReturnCode as error:
             if wait_for_success:
-                app.log.debug(f"Running > {description}: wait for success initiated.")
+                app.log.debug(f"\twait for success initiated.")
                 while wait_for_success and retries <= retries_count:
-                    app.log.debug(f"Running > {description}: retrying command.")
+                    app.log.debug(f"\tretrying command.")
                     if timeout_delta:
                         current_time = datetime.datetime.now()
                         time_left = timeout_delta - current_time
-                        app.log.debug(
-                            f"Running > {description}: will timeout in {time_left.seconds} seconds."
-                        )
+                        app.log.debug(f"\twill timeout in {time_left.seconds} seconds.")
                         if timeout_delta < current_time:
-                            raise SpecProcessException(
-                                f"Running > {description} - FAILED\nTimeout Exceeded"
-                            )
+                            raise SpecProcessException(f"\ttimeout exceeded")
                     if back_off:
-                        app.log.info(
-                            f"Running > {description}: sleeping for {back_off} seconds, retrying."
-                        )
+                        app.log.info(f"\tsleeping for {back_off} seconds, retrying.")
                         sh.sleep(back_off)
                     try:
                         _do_run()
                     except sh.ErrorReturnCode as error:
-                        app.log.debug(
-                            f"Running > {description}: failure detected, initiating retry."
-                        )
+                        app.log.info(f"\tfailure detected, initiating retry.")
                     retries_count += 1
 
-            raise SpecProcessException(
-                f"Running > {description} - FAILED\n{error.stderr.decode().strip()}"
-            )
-        app.log.info(f"Running > {description} - SUCCESS")
+            raise SpecProcessException(error.stdout.decode())
 
 
 __class_plugin_obj__ = Runner
