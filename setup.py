@@ -16,5 +16,5 @@ setuptools.setup(
     url=package.__git_repo__,
     py_modules=[package.__name__],
     entry_points={"ogc.plugins": "Runner = ogc_plugins_runner:Runner"},
-    install_requires=["ogc>=0.1.5,<1.0.0", "click>=7.0.0,<8.0.0", "sh>=1.12,<2.0"],
+    install_requires=["ogc>=0.3.22,<1.0.0", "click>=7.0.0,<8.0.0", "sh>=1.12,<2.0"],
 )

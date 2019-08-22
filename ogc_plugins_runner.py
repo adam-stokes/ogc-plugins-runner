@@ -7,7 +7,7 @@ import re
 import shlex
 from pprint import pformat
 from pathlib import Path
-from ogc.spec import SpecPlugin, SpecConfigException, SpecProcessException
+from ogc.spec import SpecPlugin, SpecResult, SpecConfigException, SpecProcessException
 from ogc.state import app
 
 __version__ = "1.0.13"
@@ -173,7 +173,8 @@ class Runner(SpecPlugin):
                 )
                 cmd.wait()
             except sh.ErrorReturnCode as error:
-                raise SpecProcessException(error.stdout.decode())
+                result = SpecResult(self, error.stdout.decode(), code=1)
+                app.collect.add_task_result(result)
         else:
             try:
                 for line in sh.env(
@@ -185,7 +186,8 @@ class Runner(SpecPlugin):
                 ):
                     app.log.info(line.strip())
             except sh.ErrorReturnCode as error:
-                raise SpecProcessException(error.stdout.decode())
+                result = SpecResult(self, error.stdout.decode(), code=1)
+                app.collect.add_task_result(result)
         sh.rm("-rf", tmp_script_path)
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
@@ -205,7 +207,8 @@ class Runner(SpecPlugin):
         tmp_path = Path(path)
 
         if not tmp_path.exists():
-            raise SpecProcessException(f"Unable to find file {tmp_path}")
+            result = SpecResult(self, f"Unable to find file {tmp_path}", code=1)
+            app.collect.add_task_result(result)
 
         if is_executable:
             self._make_executable(str(tmp_path))
@@ -279,7 +282,8 @@ class Runner(SpecPlugin):
         try:
             _do_run()
         except sh.TimeoutException as error:
-            raise SpecProcessException(f"\ttimeout exceeded")
+            result = SpecResult(self, "Timeout exceeded", code=1)
+            app.collect.add_task_result(result)
         except sh.ErrorReturnCode as error:
             if wait_for_success:
                 app.log.debug(f"\twait for success initiated.")
@@ -290,7 +294,8 @@ class Runner(SpecPlugin):
                         time_left = timeout_delta - current_time
                         app.log.debug(f"\twill timeout in {time_left.seconds} seconds.")
                         if timeout_delta < current_time:
-                            raise SpecProcessException(f"\ttimeout exceeded")
+                            result = SpecResult(self, "Timeout exceeded", code=1)
+                            app.collect.add_task_result(result)
                     if back_off:
                         app.log.info(f"\tsleeping for {back_off} seconds, retrying.")
                         sh.sleep(back_off)
@@ -300,7 +305,8 @@ class Runner(SpecPlugin):
                         app.log.info(f"\tfailure detected, initiating retry.")
                     retries_count += 1
 
-            raise SpecProcessException(error.stdout.decode())
+            result = SpecResult(self, error.stdout.decode(), code=1)
+            app.collect.add_task_result(result)
 
 
 __class_plugin_obj__ = Runner
