@@ -10,7 +10,7 @@ from pathlib import Path
 from ogc.spec import SpecPlugin, SpecResult, SpecConfigException, SpecProcessException
 from ogc.state import app
 
-__version__ = "1.0.13"
+__version__ = "1.0.14"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
