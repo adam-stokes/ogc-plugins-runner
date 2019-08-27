@@ -11,7 +11,7 @@ import sh
 from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException, SpecResult
 from ogc.state import app
 
-__version__ = "1.0.18"
+__version__ = "1.0.19"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -151,13 +151,14 @@ class Runner(SpecPlugin):
         self._make_executable(tmp_script_path)
         os.close(tmp_script[0])
         if concurrent:
-            cmd = sh.env(
-                str(tmp_script_path),
-                _env=app.env.copy(),
-                _timeout=timeout,
-                _bg=concurrent,
-            )
-            cmd.wait()
+            try:
+                cmd = sh.env(
+                    str(tmp_script_path),
+                    _env=app.env.copy(),
+                    _timeout=timeout,
+                    _bg=concurrent,
+                )
+                cmd.wait()
             except sh.ErrorReturnCode:
                 raise
         else:
