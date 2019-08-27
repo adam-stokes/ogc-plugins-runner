@@ -1,10 +1,7 @@
-import os
 from pathlib import Path
 
 import pytest
-import yaml
-from ogc.spec import SpecConfigException, SpecLoader, SpecPlugin
-from ogc.state import app
+from ogc.spec import SpecLoader
 
 from ogc_plugins_runner import Runner
 
