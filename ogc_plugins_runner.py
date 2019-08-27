@@ -11,7 +11,7 @@ import sh
 from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException, SpecResult
 from ogc.state import app
 
-__version__ = "1.0.17"
+__version__ = "1.0.18"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
@@ -151,17 +151,15 @@ class Runner(SpecPlugin):
         self._make_executable(tmp_script_path)
         os.close(tmp_script[0])
         if concurrent:
-            try:
-                cmd = sh.env(
-                    str(tmp_script_path),
-                    _env=app.env.copy(),
-                    _timeout=timeout,
-                    _bg=concurrent,
-                )
-                cmd.wait()
-            except sh.ErrorReturnCode as error:
-                result = SpecResult(error)
-                app.collect.add_task_result(result)
+            cmd = sh.env(
+                str(tmp_script_path),
+                _env=app.env.copy(),
+                _timeout=timeout,
+                _bg=concurrent,
+            )
+            cmd.wait()
+            except sh.ErrorReturnCode:
+                raise
         else:
             try:
                 for line in sh.env(
@@ -172,9 +170,8 @@ class Runner(SpecPlugin):
                     _bg_exc=False,
                 ):
                     app.log.info(line.strip())
-            except sh.ErrorReturnCode as error:
-                result = SpecResult(error)
-                app.collect.add_task_result(result)
+            except sh.ErrorReturnCode:
+                raise
         sh.rm("-rf", tmp_script_path)
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
@@ -194,8 +191,7 @@ class Runner(SpecPlugin):
         tmp_path = Path(path)
 
         if not tmp_path.exists():
-            result = SpecResult(f"Unable to find file {tmp_path}")
-            app.collect.add_task_result(result)
+            raise SpecProcessException(f"Unable to find file {tmp_path}")
 
         if is_executable:
             self._make_executable(str(tmp_path))
@@ -267,9 +263,8 @@ class Runner(SpecPlugin):
 
         try:
             _do_run()
-        except sh.TimeoutException as error:
-            result = SpecResult("Timeout exceeded")
-            app.collect.add_task_result(result)
+        except sh.TimeoutException:
+            raise
         except sh.ErrorReturnCode as error:
             if wait_for_success:
                 app.log.debug(f"\twait for success initiated.")
@@ -291,8 +286,7 @@ class Runner(SpecPlugin):
                         app.log.info(f"\tfailure detected, initiating retry.")
                     retries_count += 1
 
-            result = SpecResult(error)
-            app.collect.add_task_result(result)
+            raise
 
 
 __class_plugin_obj__ = Runner
