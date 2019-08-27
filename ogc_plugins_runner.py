@@ -35,46 +35,37 @@ meta:
   name: A test spec
 
 plan:
-  - runner:
-      description: This has some env variables mixed into cmd
-      cmd: echo $BONZAI l$ANOTHERTIME env$VAR_NICE $CONTROLLER:$MODEL $CONTROLLER $MODEL
-  - runner:
-      description: Test ogc core
-      cmd: pytest
-      tags: [dist, clean]
-  - runner:
-      description: cleanup artifacts
-      cmd: rm -rf build dist ogc.egg-info
-      tags: [dist, clean]
-  - runner:
-      description: Bump revision
-      cmd: punch --part patch
-      tags: [bdist]
-      assets:
-        - name: pytest configuration
-          source-file: data/pytest.ini
-          destination: jobs/pytest.ini
-          is-executable: no
-  - runner:
-      description: Build dist
-      cmd: python3 setup.py bdist_wheel
-      tags: [bdist]
-      assets:
-        - name: boom config
-          source-file: data/boom.ini
-          destiation: jobs/boom.ini
-          is-executable: yes
-  - runner:
-      description: Upload dist
-      cmd: twine upload dist/*
-      tags: [bdist]
-  - runner:
-      description: Running a script blob
-      script: |
-        #!/bin/bash
-
-        set -eux
-        echo "Hello from a script!" && exit 0
+  script:
+    - runner:
+        cmd: echo $BONZAI l$ANOTHERTIME env$VAR_NICE $CONTROLLER:$MODEL $CONTROLLER $MODEL
+    - runner:
+        cmd: pytest
+    - runner:
+        cmd: rm -rf build dist ogc.egg-info
+    - runner:
+        cmd: punch --part patch
+        tags: [bdist]
+        assets:
+          - name: pytest configuration
+            source-file: data/pytest.ini
+            destination: jobs/pytest.ini
+            is-executable: no
+    - runner:
+        cmd: python3 setup.py bdist_wheel
+        tags: [bdist]
+        assets:
+          - name: boom config
+            source-file: data/boom.ini
+            destiation: jobs/boom.ini
+            is-executable: yes
+    - runner:
+        cmd: twine upload dist/*
+        tags: [bdist]
+    - runner:
+        script: |
+          #!/bin/bash
+          set -eux
+          echo "Hello from a script!" && exit 0
 ```
 """
 
@@ -82,11 +73,6 @@ plan:
 class Runner(SpecPlugin):
     friendly_name = "OGC Runner Plugin"
     options = [
-        {
-            "key": "description",
-            "required": False,
-            "description": "Description of the running task",
-        },
         {
             "key": "concurrent",
             "required": False,
@@ -245,7 +231,6 @@ class Runner(SpecPlugin):
         script = cmd if cmd else self.opt("script")
         timeout = self.opt("timeout")
         concurrent = self.opt("concurrent")
-        description = self.opt("description").strip()
         assets = self.opt("assets")
         wait_for_success = self.opt("wait-for-success")
         back_off = self.opt("back-off")
@@ -263,7 +248,7 @@ class Runner(SpecPlugin):
             retries = 0
         retries_count = 0
 
-        app.log.info(f"Running: {description}")
+        app.log.info(f"Running: {cmd}")
         if assets:
             app.log.info(f"\tbuilding assets")
             for asset in assets:
