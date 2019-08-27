@@ -11,7 +11,7 @@ import sh
 from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException, SpecResult
 from ogc.state import app
 
-__version__ = "1.0.16"
+__version__ = "1.0.17"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
