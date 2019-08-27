@@ -6,20 +6,14 @@ runner plugin for ogc
 
 # usage
 
-In a ogc spec, place the following in one of the supported phases (**setup, plan, teardown**):
+In a ogc spec, place the following in the spec plan:
 
 ```yaml
-setup:
-  - env:
-      properties-file: .env
-  - runner:
-      description: Hello there
-      cmd: echo "HELLO WORLDZ"
-
 plan:
   - runner:
       description: "Full validation of charmed kubernetes"
-      fail-silently: yes
+      wait-for-success: yes
+      back-off: 60
       script: |
         #!/bin/bash
         pytest validations/tests/validation.py \
@@ -27,10 +21,4 @@ plan:
            --cloud $JUJU_CLOUD \
            --bunndle-channel $JUJU_DEPLOY_CHANNEL \
            --snap-channel $SNAP_VERSION
-teardown:
-  - runner:
-      description: Tear down juju deployment
-      cmd: juju destroy-controller -y --destroy-all-models --destroy-storage $JUJU_CONTROLLER
 ```
-
-### see `ogc spec-doc runner` for more information.

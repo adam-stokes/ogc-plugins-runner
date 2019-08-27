@@ -1,11 +1,12 @@
-from pathlib import Path
-import pytest
-import yaml
 import os
 from pathlib import Path
-from ogc_plugins_runner import Runner
-from ogc.spec import SpecLoader, SpecPlugin, SpecConfigException
+
+import pytest
+import yaml
+from ogc.spec import SpecConfigException, SpecLoader, SpecPlugin
 from ogc.state import app
+
+from ogc_plugins_runner import Runner
 
 fixtures_dir = Path(__file__).parent / "fixtures"
 
@@ -39,9 +40,8 @@ def test_nested_runner_assets(runners, mocker):
     """ Test that nested runner assets are associated with correct runner task
     """
     mocker.patch("ogc.state.app.log")
-    spec = SpecLoader.load([fixtures_dir / "spec.yml"])
     for task in runners:
-        runner = Runner("plan", task, spec)
+        runner = Runner(task)
         name = runner.opt("name")
         assets = runner.opt("assets")
         if name == "a runner":
@@ -57,9 +57,8 @@ def test_runner_assets_blob(runners, mocker):
     """ Test a blob asset is created
     """
     mocker.patch("ogc.state.app.log")
-    spec = SpecLoader.load([fixtures_dir / "spec.yml"])
     for task in runners:
-        spec = Runner(task, task, spec)
+        spec = Runner(task)
         name = spec.get_plugin_option("name")
         assets = spec.get_plugin_option("assets")
 
@@ -76,8 +75,7 @@ def test_runner_supported_options(runners):
     """ Keep a check on supported options, fail if the spec doesnt match this
     test
     """
-    spec = SpecLoader.load([fixtures_dir / "spec.yml"])
-    runner = Runner("plan", runners[-2], spec)
+    runner = Runner(runners[-2])
     spec_options = [item["key"] for item in runner.options]
     spec_options.sort()
     SUPPORTED_OPTIONS.sort()

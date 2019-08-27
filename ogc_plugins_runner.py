@@ -1,13 +1,14 @@
-import tempfile
-import sh
-import os
 import datetime
-import textwrap
+import os
 import re
 import shlex
-from pprint import pformat
+import tempfile
+import textwrap
 from pathlib import Path
-from ogc.spec import SpecPlugin, SpecResult, SpecConfigException, SpecProcessException
+from pprint import pformat
+
+import sh
+from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException, SpecResult
 from ogc.state import app
 
 __version__ = "1.0.14"
@@ -83,7 +84,7 @@ class Runner(SpecPlugin):
     options = [
         {
             "key": "description",
-            "required": True,
+            "required": False,
             "description": "Description of the running task",
         },
         {
