@@ -160,7 +160,7 @@ class Runner(SpecPlugin):
                 )
                 cmd.wait()
             except sh.ErrorReturnCode as error:
-                result = SpecResult(self, error.stdout.decode(), code=1)
+                result = SpecResult(error)
                 app.collect.add_task_result(result)
         else:
             try:
@@ -173,7 +173,7 @@ class Runner(SpecPlugin):
                 ):
                     app.log.info(line.strip())
             except sh.ErrorReturnCode as error:
-                result = SpecResult(self, error.stdout.decode(), code=1)
+                result = SpecResult(error)
                 app.collect.add_task_result(result)
         sh.rm("-rf", tmp_script_path)
 
@@ -194,7 +194,7 @@ class Runner(SpecPlugin):
         tmp_path = Path(path)
 
         if not tmp_path.exists():
-            result = SpecResult(self, f"Unable to find file {tmp_path}", code=1)
+            result = SpecResult(f"Unable to find file {tmp_path}")
             app.collect.add_task_result(result)
 
         if is_executable:
@@ -268,7 +268,7 @@ class Runner(SpecPlugin):
         try:
             _do_run()
         except sh.TimeoutException as error:
-            result = SpecResult(self, "Timeout exceeded", code=1)
+            result = SpecResult("Timeout exceeded")
             app.collect.add_task_result(result)
         except sh.ErrorReturnCode as error:
             if wait_for_success:
@@ -280,7 +280,7 @@ class Runner(SpecPlugin):
                         time_left = timeout_delta - current_time
                         app.log.debug(f"\twill timeout in {time_left.seconds} seconds.")
                         if timeout_delta < current_time:
-                            result = SpecResult(self, "Timeout exceeded", code=1)
+                            result = SpecResult("Timeout exceeded")
                             app.collect.add_task_result(result)
                     if back_off:
                         app.log.info(f"\tsleeping for {back_off} seconds, retrying.")
@@ -291,7 +291,7 @@ class Runner(SpecPlugin):
                         app.log.info(f"\tfailure detected, initiating retry.")
                     retries_count += 1
 
-            result = SpecResult(self, error.stdout.decode(), code=1)
+            result = SpecResult(error)
             app.collect.add_task_result(result)
 
 
