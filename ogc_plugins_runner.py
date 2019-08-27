@@ -248,7 +248,7 @@ class Runner(SpecPlugin):
             retries = 0
         retries_count = 0
 
-        app.log.info(f"Running: {cmd}")
+        app.log.info(f"Running: {script}")
         if assets:
             app.log.info(f"\tbuilding assets")
             for asset in assets:
