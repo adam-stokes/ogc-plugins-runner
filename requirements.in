@@ -9,3 +9,4 @@ ogc
 pytest
 pytest-mock
 pytest-sugar
+twine
