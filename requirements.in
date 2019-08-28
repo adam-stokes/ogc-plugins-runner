@@ -4,3 +4,8 @@ pylint
 flake8
 isort
 invoke
+sh
+ogc
+pytest
+pytest-mock
+pytest-sugar

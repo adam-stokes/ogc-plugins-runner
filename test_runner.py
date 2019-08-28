@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import pytest
 from ogc.spec import SpecLoader
 
+import pytest
 from ogc_plugins_runner import Runner
 
 fixtures_dir = Path(__file__).parent / "fixtures"

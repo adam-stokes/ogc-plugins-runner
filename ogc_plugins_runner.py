@@ -1,11 +1,7 @@
 import datetime
 import os
-import re
-import shlex
 import tempfile
-import textwrap
 from pathlib import Path
-from pprint import pformat
 
 import sh
 from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException
@@ -143,8 +139,11 @@ class Runner(SpecPlugin):
         #        --quiet \
         #        --return /tmp/ansible-output.txt \
         #        --command "my-ansible-command"
+        _run = sh.env
+        if "sudo" in script_data:
+            _run = sh.contrib.sudo.env
         if not script_data[:2] != "#!":
-            "#!/bin/bash\n" + script_data
+            script_data = "#!/bin/bash\n" + script_data
         tmp_script = self._tempfile
         tmp_script_path = Path(tmp_script[-1])
         tmp_script_path.write_text(script_data, encoding="utf8")
