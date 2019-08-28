@@ -8,7 +8,7 @@ from pathlib import Path
 from pprint import pformat
 
 import sh
-from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException, SpecResult
+from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException
 from ogc.state import app
 
 __version__ = "1.0.19"
@@ -151,29 +151,22 @@ class Runner(SpecPlugin):
         self._make_executable(tmp_script_path)
         os.close(tmp_script[0])
         if concurrent:
-            try:
-                cmd = sh.env(
-                    str(tmp_script_path),
-                    _env=app.env.copy(),
-                    _timeout=timeout,
-                    _bg=concurrent,
-                )
-                cmd.wait()
-            except sh.ErrorReturnCode:
-                raise
+            cmd = sh.env(
+                str(tmp_script_path),
+                _env=app.env.copy(),
+                _timeout=timeout,
+                _bg=concurrent,
+            )
+            cmd.wait()
         else:
-            try:
-                for line in sh.env(
-                    str(tmp_script_path),
-                    _env=app.env.copy(),
-                    _timeout=timeout,
-                    _iter=True,
-                    _bg_exc=False,
-                ):
-                    app.log.info(line.strip())
-            except sh.ErrorReturnCode:
-                raise
-        sh.rm("-rf", tmp_script_path)
+            for line in sh.env(
+                str(tmp_script_path),
+                _env=app.env.copy(),
+                _timeout=timeout,
+                _iter=True,
+                _bg_exc=False,
+            ):
+                app.log.info(line.strip())
 
     def _handle_source_blob(self, blob, destination, is_executable=False):
         """ Process a text blob and stores it to a file
@@ -265,7 +258,7 @@ class Runner(SpecPlugin):
         try:
             _do_run()
         except sh.TimeoutException:
-            raise
+            raise SpecProcessException(f"Timeout exceeded")
         except sh.ErrorReturnCode as error:
             if wait_for_success:
                 app.log.debug(f"\twait for success initiated.")
@@ -276,8 +269,7 @@ class Runner(SpecPlugin):
                         time_left = timeout_delta - current_time
                         app.log.debug(f"\twill timeout in {time_left.seconds} seconds.")
                         if timeout_delta < current_time:
-                            result = SpecResult("Timeout exceeded")
-                            app.collect.add_task_result(result)
+                            raise SpecProcessException(f"Failed: timeout exceeded.")
                     if back_off:
                         app.log.info(f"\tsleeping for {back_off} seconds, retrying.")
                         sh.sleep(back_off)
