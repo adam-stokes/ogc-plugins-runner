@@ -4,10 +4,11 @@ import tempfile
 from pathlib import Path
 
 import sh
-from ogc.spec import SpecConfigException, SpecPlugin, SpecProcessException
+from ogc.exceptions import SpecConfigException, SpecProcessException
+from ogc.spec import SpecPlugin
 from ogc.state import app
 
-__version__ = "1.0.22"
+__version__ = "1.0.23"
 __author__ = "Adam Stokes"
 __author_email__ = "adam.stokes@gmail.com"
 __maintainer__ = "Adam Stokes"
