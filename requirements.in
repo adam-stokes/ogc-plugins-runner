@@ -5,7 +5,7 @@ flake8
 isort
 invoke
 sh
-ogc
+ogc>=0.3.48
 pytest
 pytest-mock
 pytest-sugar
