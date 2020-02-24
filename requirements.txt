@@ -8,8 +8,8 @@ appdirs==1.4.3            # via black
 astroid==2.2.5            # via pylint
 atomicwrites==1.3.0       # via pytest
 attrs==19.1.0             # via black, packaging, pytest
-black==19.3b0
-bleach==3.1.0             # via readme-renderer
+black==19.10b0
+bleach==3.1.1             # via readme-renderer
 certifi==2019.6.16        # via requests
 chardet==3.0.4            # via requests
 click==7.0                # via black, ogc
@@ -19,7 +19,7 @@ docutils==0.15.2          # via readme-renderer
 entrypoints==0.3          # via flake8
 flake8==3.7.8
 idna==2.8                 # via requests
-importlib-metadata==0.19  # via pluggy, pytest
+importlib-metadata==0.19  # via pluggy
 invoke==1.3.0
 isort==4.3.21
 jinja2==2.10.1            # via ogc, punch.py
@@ -32,6 +32,7 @@ melddict==1.0.1           # via ogc
 more-itertools==7.2.0     # via pytest, zipp
 ogc==0.3.48
 packaging==19.1           # via pytest, pytest-sugar
+pathspec==0.7.0           # via black
 pkginfo==1.5.0.1          # via twine
 pluggy==0.12.0            # via pytest
 punch.py==1.6.2
@@ -47,6 +48,7 @@ pytest==5.1.1
 python-dotenv==0.10.3     # via ogc
 pyyaml==5.1.2             # via ogc
 readme-renderer==24.0     # via twine
+regex==2020.2.20          # via black
 requests-toolbelt==0.9.1  # via twine
 requests==2.22.0          # via ogc, requests-toolbelt, twine
 semver==2.8.1             # via ogc
@@ -57,7 +59,7 @@ termcolor==1.1.0          # via pytest-sugar
 toml==0.10.0              # via black
 tqdm==4.35.0              # via twine
 twine==1.13.0
-typed-ast==1.4.0          # via astroid
+typed-ast==1.4.0          # via astroid, black
 urllib3==1.25.3           # via requests
 wcwidth==0.1.7            # via pytest
 webencodings==0.5.1       # via bleach
@@ -65,4 +67,4 @@ wrapt==1.11.2             # via astroid
 zipp==0.6.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
-# setuptools==41.2.0        # via twine
+# setuptools
